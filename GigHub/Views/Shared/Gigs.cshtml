@@ -1,0 +1,86 @@
+﻿@model GigHub.ViewModels.GigsViewModel
+@{
+    ViewBag.Title = "Home Page";
+}
+<h1>@Model.Heading</h1>
+@using (Html.BeginForm("Search", "Gigs"))
+{
+    <div class="form-group">
+        <div class="input-group" style="width: 319px">
+            @Html.TextBoxFor(m => m.SearchTerm, new { @class = "form-control", placeholder = "Search for Genre,Artist" })
+            <span class="input-group-addon">
+                <i class="glyphicon glyphicon-search"></i>
+            </span>
+        </div>
+    </div>
+}
+<ul class="gigs voffset4">
+    @foreach (var gig in Model.UpcomingGigs)
+    {
+        <li>
+            <div class="date">
+                <div class="month">
+                    @gig.DateTime.ToString("MMM")
+                </div>
+                <div class="day">
+                    @gig.DateTime.ToString("d ")
+                </div>
+            </div>
+            <div class="details">
+                <span class="artist">
+                    @gig.Artist.Name
+                    @if (gig.IsCanceled)
+                    {
+                        <span class="label label-warning">Canceled</span>
+                    }
+                    @if (Model.ShowActions)
+                    {
+                        <a data-artist-id="@gig.ArtistId" class="pull-right js-toggle-follow">Follow</a>
+                    }
+                </span>
+
+                <span class="genre">
+                    @gig.Genre.Name
+                </span>
+                @if (Model.ShowActions && !gig.IsCanceled)
+                {
+                    <button data-gig-id="@gig.Id" class="btn btn-default btn-sm pull-right js-toggle-attendance">Going?</button>
+                }
+            </div>
+        </li>
+    }
+</ul>
+@section scripts
+{
+    <script>
+        $(document).ready(function () {
+            $(".js-toggle-attendance").click(function (e) {
+                var button = $(e.target);
+                $.post("/api/attendance", { gigId: button.attr("data-gig-id") })
+                    .done(function () {
+                        button
+                            .removeClass("btn-default")
+                            .addClass("btn-info")
+                            .text("Going");
+                    })
+                    .fail(function (e) {
+                        alert(e.responseText);
+                    });
+            });
+            $(".js-toggle-follow").click(function (e) {
+                var followLink = $(e.target);
+                $.ajax({
+                    url: "/api/following",
+                    type: "post",
+                    data: { "followeeId": followLink.attr("data-artist-id") },
+                    success: function () {
+                        followLink.text("Following");
+                    },
+                    error: function () {
+                        alert("Something Wrong");
+                    }
+                });
+            });
+        });
+    </script>
+}

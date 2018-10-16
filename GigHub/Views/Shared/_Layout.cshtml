@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@ViewBag.Title - My ASP.NET Application</title>
+    <link href='https://fonts.googleapis.com/css?family=Lato:400,700' rel='stylesheet' type='text/css'>
     @Styles.Render("~/Content/css")
     @Scripts.Render("~/bundles/modernizr")
 
@@ -17,13 +18,11 @@
                     <span class="icon-bar"></span>
                     <span class="icon-bar"></span>
                 </button>
-                @Html.ActionLink("Application name", "Index", "Home", new { area = "" }, new { @class = "navbar-brand" })
+                @Html.ActionLink("GigHub", "Index", "Home", new { area = "" }, new { @class = "navbar-brand" })
             </div>
             <div class="navbar-collapse collapse">
                 <ul class="nav navbar-nav">
-                    <li>@Html.ActionLink("Home", "Index", "Home")</li>
-                    <li>@Html.ActionLink("About", "About", "Home")</li>
-                    <li>@Html.ActionLink("Contact", "Contact", "Home")</li>
+                    <li>@Html.ActionLink("Add a Gig", "Create", "Gigs")</li>
                 </ul>
                 @Html.Partial("_LoginPartial")
             </div>
@@ -37,8 +36,74 @@
         </footer>
     </div>
 
-    @Scripts.Render("~/bundles/jquery")
-    @Scripts.Render("~/bundles/bootstrap")
+    @Scripts.Render("~/bundles/lib")
     @RenderSection("scripts", required: false)
+<script type="text/x-template" id="notification-template">
+    <ul class="notification-body">
+        <%
+        _.each(notifications, function(notification){
+        if (notification.type == 2) { %>
+        <li><span class="highlight"><%= notification.gig.artist.name %></span> has canceled the gig at <%= notification.gig.venue %> at <%=moment(notification.gig.dateTime).format("D MMM HH:mm")%>.</li>
+        <% }
+
+        else if (notification.type == 1) {
+        var changes = [],
+        originalValues = [],
+        newValues = [];
+
+        if (notification.originalVenue != notification.gig.venue) {
+        changes.push('venue');
+        originalValues.push(notification.originalVenue);
+        newValues.push(notification.gig.venue);
+        }
+
+        if (notification.originalDateTime != notification.gig.dateTime) {
+        changes.push('date/time');
+        originalValues.push(moment(notification.originalDateTime).format("D MMM HH:mm"));
+        newValues.push(moment(notification.gig.dateTime).format("D MMM HH:mm"));
+        }
+
+        %>
+        <li><span class="highlight"><%= notification.gig.artist.name %></span> has changed the <%= changes.join(' and ') %> of the gig from <%= originalValues.join('/') %> to <%= newValues.join('/') %></li>
+        <%
+        }
+        })
+        %>
+    </ul>
+
+    </script>
+    <script>
+        $(document).ready(function () {
+            $.getJSON("/api/notifications",
+                function (result) {
+                    if (result.length === 0) {
+                        return;
+                    }
+                    $(".js-notifications-count")
+                        .text(result.length)
+                        .removeClass("hide")
+                        .addClass("animated bounceInDown");
+                    $(".notifications").popover({
+                        html: true,
+                        title: "Notifications",
+                        content: function () {
+                            var compiled = _.template($("#notification-template").html());
+                            return compiled({ notifications: result });
+                        },
+                        placement: "bottom",
+                        template: '<div class="popover popover-notifications" role="tooltip"><div class="arrow"></div><h3 class="popover-title"></h3><div class="popover-content"></div></div>'
+                    }).on('shown.bs.popover', function () {
+                        $.ajax({
+                            url: "/api/notifications",
+                            type: "post",
+                            success: function () {
+                                $(".js-notifications-count").text("").addClass("hide");
+                            }
+                        });
+                    });
+                });
+
+        });
+    </script>
 </body>
 </html>
